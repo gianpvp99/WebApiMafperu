@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.7.34221.43
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebApiMafperu", "WebApiMafperu\WebApiMafperu.csproj", "{22528A2F-8DB1-48AE-9C24-FDCE4828C02C}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{22528A2F-8DB1-48AE-9C24-FDCE4828C02C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{22528A2F-8DB1-48AE-9C24-FDCE4828C02C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{22528A2F-8DB1-48AE-9C24-FDCE4828C02C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{22528A2F-8DB1-48AE-9C24-FDCE4828C02C}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {343A59C2-4117-412B-B213-08AF63DC930C}
+	EndGlobalSection
+EndGlobal
