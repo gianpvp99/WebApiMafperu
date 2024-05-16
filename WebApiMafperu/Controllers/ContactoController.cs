@@ -13,12 +13,22 @@ using Antlr.Runtime;
 using System.Linq;
 using WebGrease.Activities;
 using System.Web.Http.Cors;
+using Azure.Identity;
+using Microsoft.Graph.Models;
+using Microsoft.Identity.Client;
+using Microsoft.Graph.Models.Security;
+using System.Web.UI;
+using Microsoft.Ajax.Utilities;
+using Microsoft.Extensions.Logging;
+using Microsoft.Graph;
+using System.IdentityModel;
+using System.Net.Http.Headers;
 
 namespace WebApiMafperu.Controllers
 {
     public class ContactoController : ApiController
     {
-        private static Logger logger = LogManager.GetCurrentClassLogger();
+        private static NLog.Logger logger = LogManager.GetCurrentClassLogger();
 
 
         // GET: listarTipoDocumwnto
@@ -142,12 +152,12 @@ namespace WebApiMafperu.Controllers
             {
                 if (!Request.Content.IsMimeMultipartContent())
                 {
-                    return Ok(new RespuestaCrm() { indicadorExito = 1, descripcionError = "Sin archivos"});
+                    return Ok(new RespuestaCrm() { indicadorExito = 1, descripcionError = "Sin archivos" });
                     //return BadRequest("No se adjuntaron archivos");
 
                 }
                 // Configurar el directorio donde se guardarán los archivos adjuntos
-                var uploadPath = Path.Combine(System.Web.Hosting.HostingEnvironment.MapPath("~/Uploads"), "adjuntos");
+                var uploadPath = Path.Combine(System.Web.Hosting.HostingEnvironment.MapPath("~/Uploads"), "Adjuntos_Contacto");
                 Directory.CreateDirectory(uploadPath);
 
 
@@ -155,20 +165,18 @@ namespace WebApiMafperu.Controllers
                 var provider = new MultipartFormDataStreamProvider(uploadPath);
                 // Leer los archivos adjuntos de la solicitud y guardarlos en el directorio configurado
                 await Request.Content.ReadAsMultipartAsync(provider);
-                var files = new List<string>();
-                WebApiCrm crm = new WebApiCrm();
+                List<RespuestaCrm> response = new List<RespuestaCrm>();
 
-                RespuestaCrm response = new RespuestaCrm();
-
-                foreach (var file in provider.FileData)
+                var tasks = provider.FileData.Select(async file => // Generar una lista de tareas asíncronas para procesar cada file
                 {
                     var fileInfo = new FileInfo(file.LocalFileName);
                     var fileName = file.Headers.ContentDisposition.FileName.Trim('\"');
                     var fileExtension = Path.GetExtension(fileName);
+                    var fileNameSinExtension = Path.GetFileNameWithoutExtension(fileName);
                     var fileBytes = File.ReadAllBytes(file.LocalFileName);
                     var filePath = fileInfo.FullName;
                     var fileBase64 = Convert.ToBase64String(fileBytes);
-                    File.Move(file.LocalFileName, Path.Combine(uploadPath, fileName + "_" + fileInfo.Name + fileExtension  ));
+                    File.Move(file.LocalFileName, Path.Combine(uploadPath, fileNameSinExtension + "_" + fileInfo.Name + fileExtension));
 
                     // Crear objeto para enviar al servicio externo
                     var adjuntoData = new DatosAdjuntoCrm()
@@ -179,17 +187,50 @@ namespace WebApiMafperu.Controllers
                         Data = fileBase64
                     };
 
-                    // Aquí puedes realizar operaciones con el archivo, como guardarlo en el servidor o procesarlo de alguna manera
+                    // Se envía el adjuntoData al servicio externo
+                    WebApiCrm crm = new WebApiCrm();
+                    return await crm.adjuntarCrm(adjuntoData);
+                });
 
-                    files.Add(fileName);
-                    response = crm.adjuntarCrm(adjuntoData);
-                }
+                var tasksArray = await Task.WhenAll(tasks);
 
-                //return Request.CreateResponse(HttpStatusCode.OK, new { Message = "Archivos subidos correctamente", Files = files });
+                foreach (var item in tasksArray)
+                {
+                    response.Add(item);
+                };
 
-                return Ok(new RespuestaCrm() { indicadorExito = response.indicadorExito, descripcionError= response.descripcionError }) ;
+                //// Obtener el token de acceso para OneDrive
+                //var app = ConfidentialClientApplicationBuilder.Create("YOUR_APP_ID")
+                //            .WithClientSecret("YOUR_CLIENT_SECRET")
+                //            .WithTenantId("YOUR_TENANT_ID")
+                //            .Build();
 
-            }catch(Exception ex)
+                //string[] scopes = { "https://graph.microsoft.com/.default" };
+
+                //var result = await app.AcquireTokenForClient(scopes)
+                //                      .ExecuteAsync();
+
+                //// Inicializar el cliente de Graph
+                //var graphClient = new GraphServiceClient(new DelegateAuthenticationProvider((requestMessage) =>
+                //{
+                //    requestMessage.Headers.Authorization = new AuthenticationHeaderValue("Bearer", result.AccessToken);
+                //    return Task.FromResult(0);
+                //}));
+
+                //// Subir el archivo a OneDrive
+                //var stream = File.OpenRead(filePath); // Ruta del archivo que quieres subir
+                //var uploadedFile = await graphClient.Me.Drive.Root.ItemWithPath("YOUR_FOLDER_PATH/" + fileName).Content
+                //                              .Request()
+                //                              .PutAsync<DriveItem>(stream);
+
+                //// Si se subió correctamente, devuelve el enlace de descarga
+                //var downloadLink = uploadedFile.WebUrl;
+
+
+                return Ok(response);
+            }
+
+            catch (Exception ex)
             {
                 throw ex;
             }
@@ -213,26 +254,51 @@ namespace WebApiMafperu.Controllers
             }
         }
 
-        //[EnableCors(origins: "*", headers: "*", methods: "POST")]
-        [HttpPost]
-        [Route("api/contacto/prueba")]
-        public IHttpActionResult prueba([FromBody] Prueba prueba)
+        //GET: listarSubMotivo
+        [HttpGet]
+        [Route("api/contacto/probando")]
+        public async Task<IHttpActionResult> prueba()
         {
+
             try
             {
+                string tenantId = "9a2bc5f0-580b-4178-aa35-836e9eb5b4e8";
+                string clientId = "99129ae9-d834-4268-a763-13782d187fc9";
+                string clientSecret = "vl-8Q~Yh17uqALTmrdBX9AxrRPYNHjQ3XEDgob9A";
+                string authority = "https://login.microsoftonline.com/" + tenantId;
+                string scope = "https://graph.microsoft.com/.default";
 
-                return Ok("Correcto");
+                var confidentialClientApplication = ConfidentialClientApplicationBuilder
+                   .Create(clientId)
+                   .WithClientSecret(clientSecret)
+                   .WithAuthority(new Uri(authority))
+                   .Build();
 
+                var authenticationResult = await confidentialClientApplication
+                    .AcquireTokenForClient(new string[] { scope })
+                    .ExecuteAsync();
+
+                var accessToken = authenticationResult.AccessToken;
+
+                var httpClient = new HttpClient();
+                httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+
+                var response = await httpClient.GetAsync("https://graph.microsoft.com/v1.0/me");
+                var content = await response.Content.ReadAsStringAsync();
+
+
+                //var graphHandler = new GraphHandler(tenantId, clientId, clientSecret);
+
+                //var user = await graphHandler.GetUser("gianpvp99@gmail.com");
+                //Console.WriteLine(user?.DisplayName);
+
+                return Ok("true");
             }
             catch (Exception ex)
-
             {
                 throw ex;
             }
         }
-
-
-
 
         //POST: EnviarConsulta
         [HttpPost]
@@ -426,10 +492,70 @@ namespace WebApiMafperu.Controllers
 
             return respuestaWS;
         }
+
     }
+
 }
 
-public class Prueba{
-    public string prueba { get; set; }
-    public int id { get; set; }
+
+public class GraphHandler{
+
+    public GraphServiceClient GraphClient { get; private set; }
+    public GraphHandler(string tenantId, string clientId, string clientSecret)
+    {
+        GraphClient = CreateGraphClient(tenantId, clientId, clientSecret);
+    }
+
+    public GraphServiceClient CreateGraphClient(string tenantId, string clientId, string clientSecret)
+    {
+        var options = new TokenCredentialOptions
+        {
+            AuthorityHost = AzureAuthorityHosts.AzurePublicCloud
+        };
+
+        var clientSecretCredential = new ClientSecretCredential(
+            tenantId, clientId, clientSecret, options);
+        var scopes = new[] { "https://graph.microsoft.com/.default" };
+
+        return new GraphServiceClient(clientSecretCredential, scopes);
+
+    }
+
+    public async Task<Microsoft.Graph.Models.User> GetUser(string userPrincipalName)
+    {
+        return await GraphClient.Users[userPrincipalName].GetAsync();
+    }
+
+    //public async Task<(IEnumerable<Site>, IEnumerable<Site>)> GetSharepointSites()
+    //{
+    //    var sites = (await GraphClient.Sites.GetAllSites.GetAsync())?.Value;
+    //    if (sites == null)
+    //    {
+    //        return (null, null);
+    //    }
+
+    //    sites.RemoveAll(x => string.IsNullOrEmpty(x.DisplayName));
+
+    //    var spSites = new List<Site>();
+    //    var oneDriveSites = new List<Site>();
+
+    //    foreach (var site in sites)
+    //    {
+    //        if (site == null) continue;
+
+    //        var compare = site.WebUrl?.Split(site.SiteCollection?.Hostname)[1].Split("/");
+    //        if (compare.All(x => !string.IsNullOrEmpty(x)) || compare.Length < 1)
+    //        {
+    //            continue;
+    //        }
+
+    //        if (compare[1] == "sites" || string.IsNullOrEmpty(compare[1]))
+    //            spSites.Add(site);
+    //        else if (compare[1] == "personal")
+    //            oneDriveSites.Add(site);
+    //    }
+
+    //    return (spSites, oneDriveSites);
+    //}
+
 }

@@ -3,6 +3,7 @@ using RestSharp;
 using System.Net;
 using Newtonsoft.Json;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace WebApiMafperu.Models
 {
@@ -316,7 +317,7 @@ namespace WebApiMafperu.Models
 
             return responseJson;
         }
-        public RespuestaCrm adjuntarCrm(DatosAdjuntoCrm datosAdjunto)
+        public async Task<RespuestaCrm> adjuntarCrm(DatosAdjuntoCrm datosAdjunto)
         {
             System.Net.ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
             var uri = "https://mafperu.com.pe/wa_experiencia_crm/api/adjunto";
@@ -335,7 +336,7 @@ namespace WebApiMafperu.Models
             request.AddHeader("Authorization", "Bearer " + token);
             request.AddJsonBody(json);
 
-            var response = client.Execute(request);
+            var response = await client.ExecuteAsync(request);
 
             var responseJson = new RespuestaCrm();
 

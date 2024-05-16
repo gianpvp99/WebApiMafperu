@@ -3,6 +3,7 @@ using System;
 using System.IO;
 using Renci.SshNet;
 using Newtonsoft.Json;
+using System.Threading.Tasks;
 
 namespace WebApiMafperu.Models
 {
@@ -73,7 +74,7 @@ namespace WebApiMafperu.Models
             }
             logger.Info("Fin Envío a SFTP");
         }
-        public static void enviar_adjunto(string asunto, string guid, string folder)
+        public static async Task enviar_adjunto(string asunto, string guid, string folder)
         {
             Logger logger = LogManager.GetCurrentClassLogger();
             string directorio = System.Configuration.ConfigurationManager.AppSettings["Uploads"].ToString();
@@ -110,7 +111,7 @@ namespace WebApiMafperu.Models
                             datosAdjuntoCrm.NombreArchivo = _fileName;
                             datosAdjuntoCrm.Data = _fileBase64;
 
-                            resultado = wsReclamo.adjuntarCrm(datosAdjuntoCrm);
+                            resultado = await wsReclamo.adjuntarCrm(datosAdjuntoCrm);
 
                             logger.Info("enviar_adjunto =>" + JsonConvert.SerializeObject(resultado));
                         }
