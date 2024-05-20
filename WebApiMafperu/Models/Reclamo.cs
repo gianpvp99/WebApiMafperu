@@ -34,6 +34,13 @@ namespace WebApiMafperu.Models
 
     }
 
+    public class ClienteContrato
+    {
+        public string NumeroContrato { get; set; }
+        public string Producto { get; set; }
+        public bool error { get; set; }
+    }
+
     public class Adjunto
     {
         public bool Estado { get; set; }

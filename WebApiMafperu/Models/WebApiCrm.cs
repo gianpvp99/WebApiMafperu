@@ -4,6 +4,9 @@ using System.Net;
 using Newtonsoft.Json;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Microsoft.Graph.Models;
+using System;
+using Microsoft.Ajax.Utilities;
 
 namespace WebApiMafperu.Models
 {
@@ -154,7 +157,7 @@ namespace WebApiMafperu.Models
 
             return responseJson;
         }
-        public DatosCliente listarCliente2(string nroDocumento)
+        public List<ClienteContrato> listarCliente2(string nroDocumento)
         {
             System.Net.ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
             var uri = "https://mafperu.com.pe/wa_experiencia_crm/api/contrato/ObtenerPorDocumento";
@@ -168,7 +171,7 @@ namespace WebApiMafperu.Models
 
             var response = client.Execute(request);
 
-            var responseJson = new DatosCliente();
+            var responseJson = new List<ClienteContrato>();
 
             if (response.StatusCode == HttpStatusCode.OK)
             {
@@ -177,12 +180,18 @@ namespace WebApiMafperu.Models
                 resultado = resultado.TrimStart('"');
                 resultado = resultado.TrimEnd('"');
 
-                responseJson = JsonConvert.DeserializeObject<DatosCliente>(resultado);
-                return responseJson;
-            }
+                var responseJsonArray = JsonConvert.DeserializeObject<List<ClienteContrato>>(resultado);
+
+                if (responseJsonArray != null && responseJsonArray.Count > 0)
+                {
+                    return responseJsonArray;
+                }
+                else
+                    return new List<ClienteContrato>() { };
+                }
             else
             {
-                return new DatosCliente() { error = true };
+                return new List<ClienteContrato>() {};
             }
 
         }

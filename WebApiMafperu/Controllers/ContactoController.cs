@@ -72,19 +72,14 @@ namespace WebApiMafperu.Controllers
 
         [HttpGet]
         [Route("api/contacto/clienteDocumento2")]
-        public DatosCliente listarCliente2(string nroDocumento)
+        public async Task<IHttpActionResult> listarCliente2(string nroDocumento)
         {
             try
             {
                 WebApiCrm ws = new WebApiCrm();
-                DatosCliente lista = new DatosCliente();
+                List<ClienteContrato> lista = new List<ClienteContrato>();
                 lista = ws.listarCliente2(nroDocumento);
-                if (lista.error)
-                {
-                    // Lanzar una excepción con el código de estado HTTP 500
-                    return new DatosCliente { error = lista.error };
-                }
-                return lista;
+                return Ok(lista);
 
             }
             catch (Exception ex)
