@@ -23,6 +23,10 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Graph;
 using System.IdentityModel;
 using System.Net.Http.Headers;
+using Microsoft.Kiota.Abstractions.Authentication;
+using System.Threading;
+using Azure.Core.Pipeline;
+
 
 namespace WebApiMafperu.Controllers
 {
@@ -258,28 +262,31 @@ namespace WebApiMafperu.Controllers
             try
             {
                 string tenantId = "9a2bc5f0-580b-4178-aa35-836e9eb5b4e8";
-                string clientId = "99129ae9-d834-4268-a763-13782d187fc9";
-                string clientSecret = "vl-8Q~Yh17uqALTmrdBX9AxrRPYNHjQ3XEDgob9A";
+                string clientId = "d8f057dc-5de8-4270-bac6-4755234f3d52";
+                string clientSecret = "kaX8Q~eJ3FF51EafLL1ObWFWT~HD2lxmmRWV8dnd";
                 string authority = "https://login.microsoftonline.com/" + tenantId;
-                string scope = "https://graph.microsoft.com/.default";
+                string[] scopes = { "https://graph.microsoft.com/.default" };
 
-                var confidentialClientApplication = ConfidentialClientApplicationBuilder
+                var app = ConfidentialClientApplicationBuilder
                    .Create(clientId)
                    .WithClientSecret(clientSecret)
                    .WithAuthority(new Uri(authority))
                    .Build();
 
-                var authenticationResult = await confidentialClientApplication
-                    .AcquireTokenForClient(new string[] { scope })
+                var authenticationResult = await app
+                    .AcquireTokenForClient(scopes)
                     .ExecuteAsync();
+                //var graphClient = new GraphServiceClient(new DelegateAut(app, scopes));
+                //var tokenProvider  = new TokenAcquisition  authenticationResult.AccessToken;
 
-                var accessToken = authenticationResult.AccessToken;
+                
 
-                var httpClient = new HttpClient();
-                httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
 
-                var response = await httpClient.GetAsync("https://graph.microsoft.com/v1.0/me");
-                var content = await response.Content.ReadAsStringAsync();
+                //var httpClient = new HttpClient();
+                //httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+
+                //var response = await httpClient.GetAsync("https://graph.microsoft.com/v1.0/me");
+                //var content = await response.Content.ReadAsStringAsync();
 
 
                 //var graphHandler = new GraphHandler(tenantId, clientId, clientSecret);
@@ -294,6 +301,7 @@ namespace WebApiMafperu.Controllers
                 throw ex;
             }
         }
+
 
         //POST: EnviarConsulta
         [HttpPost]
@@ -491,6 +499,8 @@ namespace WebApiMafperu.Controllers
     }
 
 }
+
+
 
 
 public class GraphHandler{

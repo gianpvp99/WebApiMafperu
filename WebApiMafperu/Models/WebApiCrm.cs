@@ -15,7 +15,7 @@ namespace WebApiMafperu.Models
         private static string token = string.Empty;
         private static string usuario = System.Configuration.ConfigurationManager.AppSettings["usuario"].ToString();
         private static string password = System.Configuration.ConfigurationManager.AppSettings["password"].ToString();
-
+        private static string urlCRM = System.Configuration.ConfigurationManager.AppSettings["urlCRM"].ToString();
         private static Logger logger = LogManager.GetCurrentClassLogger();
         public WebApiCrm() 
         {
@@ -24,7 +24,7 @@ namespace WebApiMafperu.Models
         public void obtenerTokenCrm()
         {
             System.Net.ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
-            var uri = "https://mafperu.com.pe/wa_experiencia_crm/api/login/authenticate";
+            var uri = $"{urlCRM}/login/authenticate";
 
             DatosUsuario datosUsuario = new DatosUsuario();
             datosUsuario.Username = usuario;
@@ -49,7 +49,7 @@ namespace WebApiMafperu.Models
         public List<DatosMotivo> listarMotivo(string tipo)
         {
             System.Net.ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
-            var uri = "https://mafperu.com.pe/wa_experiencia_crm/api/Motivo";
+            var uri = $"{urlCRM}/Motivo";
             //var uri = string.Format("{0}={1}", "", tipo);
 
             var client = new RestClient(uri);
@@ -79,7 +79,7 @@ namespace WebApiMafperu.Models
         {
             System.Net.ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
             //var uri = string.Format("{0}={1}&{2}={3}", "", tipo, "Motivo", id);
-            var uri = "https://mafperu.com.pe/wa_experiencia_crm/api/SubMotivo";
+            var uri = $"{urlCRM}/SubMotivo";
 
             var client = new RestClient(uri);
             RestRequest request = new RestRequest("", Method.GET);
@@ -107,7 +107,7 @@ namespace WebApiMafperu.Models
         public List<DatosTipoDocumento> listarTipoDocumento()
         {
             System.Net.ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
-            var uri = "https://mafperu.com.pe/wa_experiencia_crm/api/TipoDoc";
+            var uri = $"{urlCRM}/TipoDoc";
 
             var client = new RestClient(uri);
             RestRequest request = new RestRequest("", Method.GET);
@@ -132,7 +132,7 @@ namespace WebApiMafperu.Models
         public DatosCliente listarCliente(string nroDocumento)
         {
             System.Net.ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
-            var uri = "https://mafperu.com.pe/wa_experiencia_crm/api/cliente/ObtenerPorDocumento";
+            var uri = $"{urlCRM}/cliente/ObtenerPorDocumento";
 
             var client = new RestClient(uri);
             RestRequest request = new RestRequest("", Method.GET);
@@ -160,7 +160,7 @@ namespace WebApiMafperu.Models
         public List<ClienteContrato> listarCliente2(string nroDocumento)
         {
             System.Net.ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
-            var uri = "https://mafperu.com.pe/wa_experiencia_crm/api/contrato/ObtenerPorDocumento";
+            var uri = $"{urlCRM}/contrato/ObtenerPorDocumento";
 
             var client = new RestClient(uri);
             RestRequest request = new RestRequest("", Method.GET);
@@ -274,7 +274,7 @@ namespace WebApiMafperu.Models
         public RespuestaCrm registrarCrm(DatosRegistroCrm datosRegistro)
         {
             System.Net.ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
-            var uri = "https://mafperu.com.pe/wa_experiencia_crm/api/RegistroForm";
+            var uri = $"{urlCRM}/RegistroForm";
 
             var r = new DatosRegistroCrm();
             r.ApellidoMaterno = datosRegistro.ApellidoMaterno;
@@ -329,7 +329,7 @@ namespace WebApiMafperu.Models
         public async Task<RespuestaCrm> adjuntarCrm(DatosAdjuntoCrm datosAdjunto)
         {
             System.Net.ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
-            var uri = "https://mafperu.com.pe/wa_experiencia_crm/api/adjunto";
+            var uri = $"{urlCRM}/adjunto";
 
             var r = new DatosAdjuntoCrm();
             r.Asunto = datosAdjunto.Asunto;

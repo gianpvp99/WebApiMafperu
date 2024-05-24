@@ -17,8 +17,9 @@ namespace WebApiMafperu.Models
     {
         private static string token = "";
         private static string clientID = "";
-        private static string clientSecret = "";        
+        private static string clientSecret = "";
         private string urlEPA = "";
+        //private static string urlEPA = System.Configuration.ConfigurationManager.AppSettings["urlCRM"].ToString();
 
         private static string emailVehiculo = System.Configuration.ConfigurationManager.AppSettings["EmailVehicular"].ToString();
         private static string emailRemitente = System.Configuration.ConfigurationManager.AppSettings["EmailRemitente"].ToString();
