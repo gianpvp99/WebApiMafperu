@@ -83,7 +83,7 @@ namespace WebApiMafperu.Models
             try
             {
                 //Validamos..
-                string _directorio = Path.Combine(directorio, folder);
+                string _directorio = System.Web.Hosting.HostingEnvironment.MapPath($"~/{directorio}/Adjuntos_SeguroVehicular/{folder}");
                 string[] _files = Directory.GetFiles(_directorio);
 
                 RespuestaCrm resultado = new RespuestaCrm();

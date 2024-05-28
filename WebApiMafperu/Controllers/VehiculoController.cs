@@ -6,6 +6,7 @@ using Newtonsoft.Json;
 using System.Web.Http;
 using WebApiMafperu.Models;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace WebApiMafperu.Controllers
 {
@@ -46,7 +47,7 @@ namespace WebApiMafperu.Controllers
         {
             WebApi ws = new WebApi();
             LogicaNegocio negocio = new LogicaNegocio();
-            WebApiCrm wsReclamo = new WebApiCrm();
+            WebApiCrm wcrm = new WebApiCrm();
 
             RespuestaWS respuestaWS = null;
             RespuestaCrm respuestaCrm = null;
@@ -69,9 +70,9 @@ namespace WebApiMafperu.Controllers
                     var resultado = ws.enviarVehiculo(asunto, mensaje);
                     logger.Info("enviarVehiculo =>" + resultado);
 
-                    //Registrar información en CRM                    
+                    //Registrar información en CRM
                     respuestaCrm = new RespuestaCrm();
-                    respuestaCrm = wsReclamo.registrarForm(registro);
+                    respuestaCrm = wcrm.registrarForm(registro);
                     logger.Info("Datos de Salida registrarCrm =>" + JsonConvert.SerializeObject(respuestaCrm));
 
                     if (respuestaCrm != null)
@@ -98,9 +99,9 @@ namespace WebApiMafperu.Controllers
         //POST: EnviarArchivo
         [HttpPost]
         [Route("api/vehiculo/enviararchivo")]
-        public string EnviarArchivo(int indicadorExito, string guid, string idsolicitud, string asunto)
+        public async Task<IHttpActionResult> EnviarArchivoAsync(int indicadorExito, string guid, string idsolicitud, string asunto)
         {
-            WebApi ws = new WebApi();
+            //WebApi ws = new WebApi();
 
             string respuesta = string.Empty;
             string rutacliente = string.Empty;
@@ -116,28 +117,29 @@ namespace WebApiMafperu.Controllers
                     if (request != null && request.Files.Count > 0)
                     {
                         //Creando carpeta
-                        rutacliente = string.Format("{0}\\{1}", directorio, idsolicitud);
-                        if (!Directory.Exists(rutacliente))
+                        //rutacliente = string.Format("\\{0}\\{1}", directorio + "", idsolicitud);
+                        var uploadPath = Path.Combine(System.Web.Hosting.HostingEnvironment.MapPath("~/Uploads"), $"Adjuntos_SeguroVehicular\\{idsolicitud}");
+                        if (!Directory.Exists(uploadPath))
                         {
-                            Directory.CreateDirectory(rutacliente);
+                            Directory.CreateDirectory(uploadPath);
                         }
 
                         foreach (string file in request.Files)
                         {
                             var postedFile = request.Files[file];
-                            var filePath = HttpContext.Current.Server.MapPath(string.Format("~/Uploads/{0}/{1}", idsolicitud, postedFile.FileName));
+                            var filePath = HttpContext.Current.Server.MapPath($"~/{directorio}/Adjuntos_SeguroVehicular/{idsolicitud}/{postedFile.FileName}");
                             postedFile.SaveAs(filePath);
                         }
 
                         //Enviar archivos adjuntos a CRM
                         logger.Info("Enviando archivos adjuntos: " + idsolicitud);
-                        Helper.enviar_adjunto(asunto, guid, idsolicitud);
-
+                        await Helper.enviar_adjunto(asunto, guid, idsolicitud);
+                        
                         //Eliminando temporal...
-                        var temporal = Path.Combine(directorio, idsolicitud);
-                        if (Directory.Exists(temporal))
+                        //var temporal = Path.Combine(directorio, idsolicitud);
+                        if (Directory.Exists(uploadPath))
                         {
-                            Directory.Delete(temporal, true);
+                            Directory.Delete(uploadPath, true);
                             logger.Info("Eliminando temporal ...");
                         }
                     }
@@ -160,7 +162,7 @@ namespace WebApiMafperu.Controllers
 
             logger.Info("Fin EnviarArchivo");
 
-            return respuesta;
+            return Ok(respuesta);
         }
     }
 }

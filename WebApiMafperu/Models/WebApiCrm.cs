@@ -7,6 +7,10 @@ using System.Threading.Tasks;
 using Microsoft.Graph.Models;
 using System;
 using Microsoft.Ajax.Utilities;
+using System.Net.Mail;
+using System.Net.Security;
+using System.Security.Cryptography.X509Certificates;
+using System.Threading;
 
 namespace WebApiMafperu.Models
 {
@@ -16,6 +20,7 @@ namespace WebApiMafperu.Models
         private static string usuario = System.Configuration.ConfigurationManager.AppSettings["usuario"].ToString();
         private static string password = System.Configuration.ConfigurationManager.AppSettings["password"].ToString();
         private static string urlCRM = System.Configuration.ConfigurationManager.AppSettings["urlCRM"].ToString();
+
         private static Logger logger = LogManager.GetCurrentClassLogger();
         public WebApiCrm() 
         {
@@ -402,5 +407,6 @@ namespace WebApiMafperu.Models
 
             return responseJson;
         }
+
     }
 }
