@@ -26,6 +26,8 @@ using System.Net.Http.Headers;
 using Microsoft.Kiota.Abstractions.Authentication;
 using System.Threading;
 using Azure.Core.Pipeline;
+using RestSharp;
+using Azure.Core;
 
 
 namespace WebApiMafperu.Controllers
@@ -261,21 +263,86 @@ namespace WebApiMafperu.Controllers
 
             try
             {
+                string grant_type = "client_credentials";
                 string tenantId = "9a2bc5f0-580b-4178-aa35-836e9eb5b4e8";
                 string clientId = "d8f057dc-5de8-4270-bac6-4755234f3d52";
                 string clientSecret = "kaX8Q~eJ3FF51EafLL1ObWFWT~HD2lxmmRWV8dnd";
                 string authority = "https://login.microsoftonline.com/" + tenantId;
-                string[] scopes = { "https://graph.microsoft.com/.default" };
+                string scope = "https://graph.microsoft.com/.default";
+                //string[] scopes = { "https://graph.microsoft.com/.default" };
 
-                var app = ConfidentialClientApplicationBuilder
-                   .Create(clientId)
-                   .WithClientSecret(clientSecret)
-                   .WithAuthority(new Uri(authority))
-                   .Build();
+                //string _urlApi = $"https://login.microsoftonline.com/{tenantId}/oauth2/v2.0/token";
+                //MSGraphToken _token = new MSGraphToken();
 
-                var authenticationResult = await app
-                    .AcquireTokenForClient(scopes)
-                    .ExecuteAsync();
+                //RestClient client = new RestClient(_urlApi);
+                //RestRequest request = new RestRequest("", Method.POST);
+                //request.AddHeader("Content-Type", "application/x-www-form-urlencoded");
+                //request.AddParameter("grant_type", grant_type);
+                //request.AddParameter("client_id", clientId);
+                //request.AddParameter("scope", scope);
+                //request.AddParameter("client_secret", clientSecret);
+
+                //var response = client.Execute(request);
+                //_token = JsonConvert.DeserializeObject<MSGraphToken>(response.Content); // JsonSerializer.Deserialize<MSGraphToken>(response.Content);
+
+                //if (_token != null)
+                //{
+                    var clientSecretCredential = new ClientSecretCredential(tenantId, clientId, clientSecret);
+                    var tokenRequestContext = new TokenRequestContext(new []{ scope });
+                    var token = clientSecretCredential.GetTokenAsync(tokenRequestContext).Result.Token;
+                    // URL de la API de Microsoft Graph para obtener los archivos de OneDrive
+                    string graphApiUrl = "https://graph.microsoft.com/v1.0/me/drive/root/children";
+
+                    // Configurar la solicitud HTTP
+                    HttpClient httpClient = new HttpClient();
+                    httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+                    // Hacer la solicitud GET a la API de Graph
+                    HttpResponseMessage response = await httpClient.GetAsync(graphApiUrl);
+                if (response.IsSuccessStatusCode)
+                {
+                    // Leer la respuesta JSON
+                    string jsonResponse = await response.Content.ReadAsStringAsync();
+                    dynamic json = JsonConvert.DeserializeObject(jsonResponse);
+
+                    // Procesar los archivos obtenidos
+                    List<string> fileNames = new List<string>();
+                    foreach (var item in json.value)
+                    {
+                        fileNames.Add(item.name.ToString());
+                    }
+
+                    return Ok(fileNames);
+                }
+                else
+                {
+                    return InternalServerError(new Exception($"Error al obtener los archivos de OneDrive: {response.ReasonPhrase}"));
+                }
+                //var graphClient = new GraphServiceClient(new DelegateAuthenticationProvider(async (requestMessage) =>
+                //{
+                //    requestMessage.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _token.access_token.ToString());
+                //    await Task.CompletedTask;
+                //})
+                //);
+                //var driveItems = await graphClient.Me.Drive.Root.Children.Request().GetAsync();
+
+                //}
+
+                //string tenantId = "9a2bc5f0-580b-4178-aa35-836e9eb5b4e8";
+                //string clientId = "d8f057dc-5de8-4270-bac6-4755234f3d52";
+                //string clientSecret = "kaX8Q~eJ3FF51EafLL1ObWFWT~HD2lxmmRWV8dnd";
+                //string authority = "https://login.microsoftonline.com/" + tenantId;
+                //string[] scopes = { "https://graph.microsoft.com/.default" };
+
+                //var app = ConfidentialClientApplicationBuilder
+                //   .Create(clientId)
+                //   .WithClientSecret(clientSecret)
+                //   .WithAuthority(new Uri(authority))
+                //   .Build();
+
+                //var authenticationResult = await app
+                //    .AcquireTokenForClient(scopes)
+                //    .ExecuteAsync();
                 //var graphClient = new GraphServiceClient(new DelegateAut(app, scopes));
                 //var tokenProvider  = new TokenAcquisition  authenticationResult.AccessToken;
 
@@ -500,6 +567,14 @@ namespace WebApiMafperu.Controllers
 
 }
 
+public class MSGraphToken
+{
+    public string token_type { get; set; }
+    public int expires_in { get; set; }
+    public int ext_expires_in { get; set; }
+    public string access_token { get; set; }
+    public MSGraphToken() { }
+}
 
 
 
