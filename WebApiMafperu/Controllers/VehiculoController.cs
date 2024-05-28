@@ -102,10 +102,11 @@ namespace WebApiMafperu.Controllers
         public async Task<IHttpActionResult> EnviarArchivoAsync(int indicadorExito, string guid, string idsolicitud, string asunto)
         {
             //WebApi ws = new WebApi();
-
+            List<RespuestaCrm> response = new List<RespuestaCrm>();
             string respuesta = string.Empty;
             string rutacliente = string.Empty;
             string directorio = System.Configuration.ConfigurationManager.AppSettings["Uploads"].ToString();
+            var uploadPath = Path.Combine(System.Web.Hosting.HostingEnvironment.MapPath($"~/{directorio}"), $"Adjuntos_SeguroVehicular\\{idsolicitud}");
 
             logger.Info("Inicio EnviarArchivo");
             try
@@ -118,7 +119,6 @@ namespace WebApiMafperu.Controllers
                     {
                         //Creando carpeta
                         //rutacliente = string.Format("\\{0}\\{1}", directorio + "", idsolicitud);
-                        var uploadPath = Path.Combine(System.Web.Hosting.HostingEnvironment.MapPath("~/Uploads"), $"Adjuntos_SeguroVehicular\\{idsolicitud}");
                         if (!Directory.Exists(uploadPath))
                         {
                             Directory.CreateDirectory(uploadPath);
@@ -133,10 +133,10 @@ namespace WebApiMafperu.Controllers
 
                         //Enviar archivos adjuntos a CRM
                         logger.Info("Enviando archivos adjuntos: " + idsolicitud);
-                        await Helper.enviar_adjunto(asunto, guid, idsolicitud);
-                        
+                        response = await Helper.enviar_adjunto(asunto, guid, idsolicitud);
+
                         //Eliminando temporal...
-                        //var temporal = Path.Combine(directorio, idsolicitud);
+                        var temporal = Path.Combine(directorio, idsolicitud);
                         if (Directory.Exists(uploadPath))
                         {
                             Directory.Delete(uploadPath, true);
@@ -144,25 +144,25 @@ namespace WebApiMafperu.Controllers
                         }
                     }
                 }
+                return Ok(response);
             }
             catch (Exception ex)
             {
                 respuesta = ex.Message.ToString();
 
                 //Eliminando temporal...
-                var temporal = Path.Combine(directorio, idsolicitud);
-                if (Directory.Exists(temporal))
+                //var temporal = Path.Combine(directorio, idsolicitud);
+                if (Directory.Exists(uploadPath))
                 {
-                    Directory.Delete(temporal, true);
+                    Directory.Delete(uploadPath, true);
                     logger.Info("Eliminando temporal ...");
                 }
 
                 logger.Info("Error en Proceso: " + respuesta);
+                logger.Info("Fin EnviarArchivo");
+                return InternalServerError(ex);
             }
 
-            logger.Info("Fin EnviarArchivo");
-
-            return Ok(respuesta);
         }
     }
 }

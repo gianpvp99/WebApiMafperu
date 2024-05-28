@@ -318,6 +318,7 @@ namespace WebApiMafperu.Controllers
                 {
                     return InternalServerError(new Exception($"Error al obtener los archivos de OneDrive: {response.ReasonPhrase}"));
                 }
+
                 //var graphClient = new GraphServiceClient(new DelegateAuthenticationProvider(async (requestMessage) =>
                 //{
                 //    requestMessage.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _token.access_token.ToString());
@@ -361,7 +362,6 @@ namespace WebApiMafperu.Controllers
                 //var user = await graphHandler.GetUser("gianpvp99@gmail.com");
                 //Console.WriteLine(user?.DisplayName);
 
-                return Ok("true");
             }
             catch (Exception ex)
             {

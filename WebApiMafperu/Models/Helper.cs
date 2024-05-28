@@ -4,6 +4,9 @@ using System.IO;
 using Renci.SshNet;
 using Newtonsoft.Json;
 using System.Threading.Tasks;
+using Microsoft.Graph.Models;
+using System.Collections.Generic;
+using System.Web.Http.Results;
 
 namespace WebApiMafperu.Models
 {
@@ -74,7 +77,7 @@ namespace WebApiMafperu.Models
             }
             logger.Info("Fin Envío a SFTP");
         }
-        public static async Task enviar_adjunto(string asunto, string guid, string folder)
+        public static async Task<List<RespuestaCrm>> enviar_adjunto(string asunto, string guid, string folder)
         {
             Logger logger = LogManager.GetCurrentClassLogger();
             string directorio = System.Configuration.ConfigurationManager.AppSettings["Uploads"].ToString();
@@ -86,7 +89,7 @@ namespace WebApiMafperu.Models
                 string _directorio = System.Web.Hosting.HostingEnvironment.MapPath($"~/{directorio}/Adjuntos_SeguroVehicular/{folder}");
                 string[] _files = Directory.GetFiles(_directorio);
 
-                RespuestaCrm resultado = new RespuestaCrm();
+                List<RespuestaCrm> resultado = new List<RespuestaCrm>();
                 WebApiCrm wsReclamo = new WebApiCrm();
 
                 logger.Info("Cant. Archivos: " + _files.Length.ToString());
@@ -111,8 +114,8 @@ namespace WebApiMafperu.Models
                             datosAdjuntoCrm.NombreArchivo = _fileName;
                             datosAdjuntoCrm.Data = _fileBase64;
 
-                            resultado = await wsReclamo.adjuntarCrm(datosAdjuntoCrm);
-
+                            //resultado = await wsReclamo.adjuntarCrm(datosAdjuntoCrm);
+                            resultado.Add(await wsReclamo.adjuntarCrm(datosAdjuntoCrm));
                             logger.Info("enviar_adjunto =>" + JsonConvert.SerializeObject(resultado));
                         }
                     }
@@ -121,12 +124,15 @@ namespace WebApiMafperu.Models
                 {
                     logger.Info("No se encontraron archivos para adjuntar. Por favor, verifique.");
                 }
+                return resultado;
+
             }
             catch (Exception error)
             {
                 logger.Info("Error Adjunto CRM: " + error.ToString());
+                throw error;
             }
-            logger.Info("Fin Envío Adjunto CRM");
+
         }
         public static string generar_mensaje(DatosRegistroCrm2 input) 
         {
