@@ -20,6 +20,11 @@ namespace WebApiMafperu.Models
         private static string usuario = System.Configuration.ConfigurationManager.AppSettings["usuario"].ToString();
         private static string password = System.Configuration.ConfigurationManager.AppSettings["password"].ToString();
         private static string urlCRM = System.Configuration.ConfigurationManager.AppSettings["urlCRM"].ToString();
+        private static string emailReclamaciones = System.Configuration.ConfigurationManager.AppSettings["EmailReclamaciones"].ToString();
+        private static string Clave = System.Configuration.ConfigurationManager.AppSettings["Clave"].ToString();
+        private static string Servidor = System.Configuration.ConfigurationManager.AppSettings["Servidor"].ToString();
+        private static int Puerto = Convert.ToInt32(System.Configuration.ConfigurationManager.AppSettings["Puerto"]);
+
 
         private static Logger logger = LogManager.GetCurrentClassLogger();
         public WebApiCrm() 
@@ -204,7 +209,7 @@ namespace WebApiMafperu.Models
         public List<DatosDepartamento> listarDepartamento()
         {
             System.Net.ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
-            var uri = "";
+            var uri = $"{urlCRM}/Departamento";
 
             var client = new RestClient(uri);
             RestRequest request = new RestRequest("", Method.GET);
@@ -229,8 +234,8 @@ namespace WebApiMafperu.Models
         public List<DatosProvincia> listarProvincia(string CodDepartamento)
         {
             System.Net.ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
-            var uri = string.Format("{0}?{1}={2}", "", "CodDepartamento", CodDepartamento);
-
+            //var uri = string.Format("{0}?{2}={3}", urlCRM,"Provincia","CodDepartamento", CodDepartamento);
+            var uri = $"{urlCRM}/Provincia?CodDepartamento={CodDepartamento}";
             var client = new RestClient(uri);
             RestRequest request = new RestRequest("", Method.GET);
             request.AddHeader("Content-Type", "application/json");
@@ -254,7 +259,8 @@ namespace WebApiMafperu.Models
         public List<DatosDistrito> listarDistrito(string CodProvincia)
         {
             System.Net.ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
-            var uri = string.Format("{0}?{1}={2}", "", "CodProvincia", CodProvincia);
+            //var uri = string.Format("{0}?{1}={2}", "", "CodProvincia", CodProvincia);
+            var uri = $"{urlCRM}/Distrito?CodProvincia={CodProvincia}";
 
             var client = new RestClient(uri);
             RestRequest request = new RestRequest("", Method.GET);
@@ -276,7 +282,7 @@ namespace WebApiMafperu.Models
 
             return responseJson;
         }
-        public RespuestaCrm registrarCrm(DatosRegistroCrm datosRegistro)
+        public RespuestaCrm registrarCrmContacto(DatosRegistroCrm datosRegistro)
         {
             System.Net.ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
             var uri = $"{urlCRM}/RegistroForm";
@@ -298,15 +304,71 @@ namespace WebApiMafperu.Models
             r.TipoDoc = datosRegistro.TipoDoc;
             r.TipoProductoLib = datosRegistro.TipoProductoLib;
 
-            //r.RepresentaEmpresa = datosRegistro.RepresentaEmpresa
-            //r.uDepartamento = datosRegistro.uDepartamento;
-            //r.uProvincia = datosRegistro.uProvincia;
-            //r.uDistrito = datosRegistro.uDistrito;
-            //r.uDireccion = datosRegistro.uDireccion;
-            //r.eRazonSocial = datosRegistro.eRazonSocial;
-            //r.eTipoDoc = datosRegistro.eTipoDoc;
-            //r.eNroDoc = datosRegistro.eNroDoc;
-            //r.TipoProducto = datosRegistro.TipoProducto;
+            r.RepresentaEmpresa = datosRegistro.RepresentaEmpresa;
+            r.uDepartamento = datosRegistro.uDepartamento;
+            r.uProvincia = datosRegistro.uProvincia;
+            r.uDistrito = datosRegistro.uDistrito;
+            r.uDireccion = datosRegistro.uDireccion;
+            r.eRazonSocial = datosRegistro.eRazonSocial;
+            r.eTipoDoc = datosRegistro.eTipoDoc;
+            r.eNroDoc = datosRegistro.eNroDoc;
+            r.TipoProducto = datosRegistro.TipoProducto;
+
+            var json = JsonConvert.SerializeObject(r);
+
+            logger.Info("Datos de Entrada registrarCrm =>" + json);
+
+            var client = new RestClient(uri);
+            RestRequest request = new RestRequest("", Method.POST);
+            request.AddHeader("Content-Type", "application/json");
+            request.AddHeader("Authorization", "Bearer " + token);
+            request.AddJsonBody(json);
+
+            var response = client.Execute(request);
+
+            var responseJson = new RespuestaCrm();
+
+            if (response.StatusCode == HttpStatusCode.OK)
+            {
+                var resultado = response.Content.ToString();
+
+                responseJson = JsonConvert.DeserializeObject<RespuestaCrm>(resultado);
+            }
+
+            return responseJson;
+        }
+
+        public RespuestaCrm registrarCrmLibroR(DatosRegistroCrm datosRegistro)
+        {
+            System.Net.ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
+            var uri = $"{urlCRM}/Registro";
+
+            var r = new DatosRegistroCrm();
+            r.ApellidoMaterno = datosRegistro.ApellidoMaterno;
+            r.ApellidoPaterno = datosRegistro.ApellidoPaterno;
+            r.Celular = datosRegistro.Celular;
+            r.DetalleCaso = datosRegistro.DetalleCaso;
+            r.Email = datosRegistro.Email;
+            r.EnvioNotificacion = datosRegistro.EnvioNotificacion;
+            r.Motivo = datosRegistro.Motivo;
+            r.Nombres = datosRegistro.Nombres;
+            r.NroDoc = datosRegistro.NroDoc;
+            r.NumeroContrato = datosRegistro.NumeroContrato;
+            r.Placa = datosRegistro.Placa;
+            r.SubMotivo = datosRegistro.SubMotivo;
+            r.TipoCaso = datosRegistro.TipoCaso;
+            r.TipoDoc = datosRegistro.TipoDoc;
+            r.TipoProductoLib = datosRegistro.TipoProductoLib;
+
+            r.RepresentaEmpresa = datosRegistro.RepresentaEmpresa;
+            r.uDepartamento = datosRegistro.uDepartamento;
+            r.uProvincia = datosRegistro.uProvincia;
+            r.uDistrito = datosRegistro.uDistrito;
+            r.uDireccion = datosRegistro.uDireccion;
+            r.eRazonSocial = datosRegistro.eRazonSocial;
+            r.eTipoDoc = datosRegistro.eTipoDoc;
+            r.eNroDoc = datosRegistro.eNroDoc;
+            r.TipoProducto = datosRegistro.TipoProducto;
 
             var json = JsonConvert.SerializeObject(r);
 
@@ -407,6 +469,51 @@ namespace WebApiMafperu.Models
 
             return responseJson;
         }
+        public string enviarReclamo(string asunto, string mensaje, DatosRegistroCrm2 datos)
+        {
+            string respuesta = string.Empty;
+            if (mensaje != null)
+            {
+                MailMessage correo = new MailMessage();
+                correo.From = new MailAddress(emailReclamaciones, "MAF PERÚ", System.Text.Encoding.UTF8); //Correo origen
+                correo.Subject = asunto; //Asunto
+                correo.To.Add(datos.Email); //Correo destino 
+                //correo.To.Add(datos.Email); //Correo destino 
+                correo.Body = mensaje;
+                correo.IsBodyHtml = true;
+                correo.Priority = MailPriority.Normal;
 
+                SmtpClient smtp = new SmtpClient();
+                smtp.UseDefaultCredentials = false; //true
+                smtp.Host = Servidor; //Host del servidor de correo 
+                smtp.Port = Puerto; //Puerto de salida
+                smtp.Credentials = new System.Net.NetworkCredential(emailReclamaciones, Clave); //Cuenta de correo            
+
+                ServicePointManager.ServerCertificateValidationCallback = delegate (object s, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors) { return true; };
+                smtp.EnableSsl = true; //True si el servidor de correo permite ssl
+
+                try
+                {
+                    using (var smtpClient = new SmtpClient())
+                    {
+                        //Envio del correo
+                        smtp.Send(correo);
+                        respuesta = "OK";
+                    }
+                }
+                catch (Exception ex)
+                {
+                    respuesta = (ex.Message.ToString());
+
+                    logger.Info("Error en enviarReclamo: " + respuesta);
+                }
+
+                correo.Dispose();
+
+                Thread.Sleep(1000);
+            }
+
+            return respuesta;
+        }
     }
 }

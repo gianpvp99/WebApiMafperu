@@ -6,6 +6,9 @@ using Newtonsoft.Json;
 using System.Web.Http;
 using WebApiMafperu.Models;
 using System.Collections.Generic;
+using System.Threading.Tasks;
+using System.Net.Http;
+using System.Linq;
 
 namespace WebApiMafperu.Controllers
 {
@@ -169,7 +172,7 @@ namespace WebApiMafperu.Controllers
 
                     //Registrar información en CRM                    
                     respuestaCrm = new RespuestaCrm();
-                    respuestaCrm = wsReclamo.registrarCrm(registro);
+                    respuestaCrm = wsReclamo.registrarCrmLibroR(registro);
                     logger.Info("Datos de Salida registrarCrm => " + JsonConvert.SerializeObject(respuestaCrm));
 
                     if (respuestaCrm != null) 
@@ -193,76 +196,70 @@ namespace WebApiMafperu.Controllers
             return respuestaWS;
         }
 
-        //POST: EnviarArchivo
         [HttpPost]
-        public string EnviarArchivo(int indicadorExito, string guid, string idreclamo, string asunto) 
+        [Route("api/reclamo/enviararchivo")]
+        public async Task<IHttpActionResult> adjunto()
         {
-            WebApi ws = new WebApi();
-            WebApiCrm wsReclamo = new WebApiCrm();
-
-            string respuesta = string.Empty;
-            string rutacliente = string.Empty;            
-            string directorio = System.Configuration.ConfigurationManager.AppSettings["Uploads"].ToString();
-
-            logger.Info("Inicio EnviarArchivo");
             try
             {
-                if (indicadorExito != 0 && guid != null && idreclamo != "" && asunto != "")
-                {                    
-                    //Recuperando archivos
-                    var request = HttpContext.Current.Request;
-                    if (request != null && request.Files.Count > 0)
-                    {
-                        //Creando carpeta
-                        rutacliente = string.Format("{0}\\{1}", directorio, idreclamo);
-                        if (!Directory.Exists(rutacliente))
-                        {
-                            Directory.CreateDirectory(rutacliente);
-                        }
+                if (!Request.Content.IsMimeMultipartContent())
+                {
+                    return Ok(new RespuestaCrm() { indicadorExito = 1, descripcionError = "Sin archivos" });
+                    //return BadRequest("No se adjuntaron archivos");
 
-                        foreach (string file in request.Files)
-                        {
-                            var postedFile = request.Files[file];
-                            var filePath = HttpContext.Current.Server.MapPath(string.Format("~/Uploads/{0}/{1}", idreclamo, postedFile.FileName));
-                            postedFile.SaveAs(filePath);
-                        }
-
-                        //Enviar archivos adjuntos a CRM
-                        logger.Info("Enviando archivos adjuntos: " + idreclamo);
-                        Helper.enviar_adjunto(asunto, guid, idreclamo);
-
-                        //Enviar archivos a SFTP
-                        //logger.Info("Enviando archivos SFTP: " + idreclamo);
-                        //Helper.enviar_sftp(idreclamo);
-
-                        //Eliminando temporal...
-                        var temporal = Path.Combine(directorio, idreclamo);
-                        if (Directory.Exists(temporal))
-                        {
-                            Directory.Delete(temporal, true);
-                            logger.Info("Eliminando temporal ...");
-                        }
-                    }
                 }
+                // Configurar el directorio donde se guardarán los archivos adjuntos
+                var uploadPath = Path.Combine(System.Web.Hosting.HostingEnvironment.MapPath("~/Uploads"), "Adjuntos_Reclamo");
+                Directory.CreateDirectory(uploadPath);
+
+
+                // Configurar el proveedor de stream para leer los archivos adjuntos
+                var provider = new MultipartFormDataStreamProvider(uploadPath);
+                // Leer los archivos adjuntos de la solicitud y guardarlos en el directorio configurado
+                await Request.Content.ReadAsMultipartAsync(provider);
+                List<RespuestaCrm> response = new List<RespuestaCrm>();
+
+                var tasks = provider.FileData.Select(async file => // Generar una lista de tareas asíncronas para procesar cada file
+                {
+                    var fileInfo = new FileInfo(file.LocalFileName);
+                    var fileName = file.Headers.ContentDisposition.FileName.Trim('\"');
+                    var fileExtension = Path.GetExtension(fileName);
+                    var fileNameSinExtension = Path.GetFileNameWithoutExtension(fileName);
+                    var fileBytes = File.ReadAllBytes(file.LocalFileName);
+                    var filePath = fileInfo.FullName;
+                    var fileBase64 = Convert.ToBase64String(fileBytes);
+                    File.Move(file.LocalFileName, Path.Combine(uploadPath, fileNameSinExtension + "_" + fileInfo.Name + fileExtension));
+
+                    // Crear objeto para enviar al servicio externo
+                    var adjuntoData = new DatosAdjuntoCrm()
+                    {
+                        gEntidad = provider.FormData.GetValues("caseId").FirstOrDefault(), //"9aa235a2-6511-ef11-9f8a-000d3a597a3c",
+                        Asunto = provider.FormData.GetValues("subject").FirstOrDefault(),
+                        NombreArchivo = fileName,
+                        Data = fileBase64
+                    };
+
+                    // Se envía el adjuntoData al servicio externo
+                    WebApiCrm crm = new WebApiCrm();
+                    return await crm.adjuntarCrm(adjuntoData);
+                });
+
+                var tasksArray = await Task.WhenAll(tasks);
+
+                foreach (var item in tasksArray)
+                {
+                    response.Add(item);
+                };
+
+                return Ok(response);
             }
+
             catch (Exception ex)
             {
-                respuesta = ex.Message.ToString();
-
-                //Eliminando temporal...
-                var temporal = Path.Combine(directorio, idreclamo);
-                if (Directory.Exists(temporal))
-                {
-                    Directory.Delete(temporal, true);
-                    logger.Info("Eliminando temporal ...");
-                }
-
-                logger.Info("Error en Proceso: " + respuesta);                
+                throw ex;
             }
-            logger.Info("Fin EnviarArchivo");
-
-            return respuesta;
         }
+
 
         //GET: ObtenerFechaAtencion
         [HttpGet]
@@ -325,9 +322,10 @@ namespace WebApiMafperu.Controllers
 
         //POST: EnviarReclamo2
         [HttpPost]
-        public RespuestaWS EnviarReclamo2([FromBody] DatosRegistroCrm2 registro)
+        [Route("api/reclamo/enviarreclamo2")]
+        public async Task<RespuestaWS> EnviarReclamo2([FromBody] DatosRegistroCrm2 registro)
         {
-            WebApi ws = new WebApi();
+            //WebApi ws = new WebApi();
             LogicaNegocio negocio = new LogicaNegocio();
             WebApiCrm wsReclamo = new WebApiCrm();
 
@@ -350,7 +348,7 @@ namespace WebApiMafperu.Controllers
 
                     //Enviar correo de reclamo o queja
                     mensaje = mensaje.Replace("[TITULO]", titulo);
-                    var resultado = ws.enviarReclamo(asunto, mensaje);
+                    var resultado = wsReclamo.enviarReclamo(asunto, mensaje, registro);
                     logger.Info("enviarReclamo => " + resultado);
 
                     //Registrar información en CRM
@@ -379,7 +377,7 @@ namespace WebApiMafperu.Controllers
                     obj.EnvioNotificacion = registro.EnvioNotificacion;
 
                     respuestaCrm = new RespuestaCrm();
-                    respuestaCrm = wsReclamo.registrarCrm(obj);
+                    respuestaCrm = wsReclamo.registrarCrmLibroR(obj);
                     logger.Info("Datos de Salida registrarCrm => " + JsonConvert.SerializeObject(respuestaCrm));
 
                     if (respuestaCrm != null)
@@ -392,15 +390,17 @@ namespace WebApiMafperu.Controllers
 
                     logger.Info("Datos de salida: " + JsonConvert.SerializeObject(respuestaWS));
                 }
+
+                logger.Info("Fin EnviarReclamo");
+                return respuestaWS;
             }
             catch (Exception ex)
             {
                 logger.Info("Error en Proceso: " + ex.Message.ToString());
                 logger.Info("Fin EnviarReclamo");
+                throw ex;
             }
-            logger.Info("Fin EnviarReclamo");
-
-            return respuestaWS;
+            
         }
     }
 }

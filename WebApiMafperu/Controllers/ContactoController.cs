@@ -29,12 +29,12 @@ using Azure.Core.Pipeline;
 using RestSharp;
 using Azure.Core;
 
-
 namespace WebApiMafperu.Controllers
 {
     public class ContactoController : ApiController
     {
         private static NLog.Logger logger = LogManager.GetCurrentClassLogger();
+        private IConfidentialClientApplication confidentialClientApplication;
 
 
         // GET: listarTipoDocumwnto
@@ -200,34 +200,6 @@ namespace WebApiMafperu.Controllers
                     response.Add(item);
                 };
 
-                //// Obtener el token de acceso para OneDrive
-                //var app = ConfidentialClientApplicationBuilder.Create("YOUR_APP_ID")
-                //            .WithClientSecret("YOUR_CLIENT_SECRET")
-                //            .WithTenantId("YOUR_TENANT_ID")
-                //            .Build();
-
-                //string[] scopes = { "https://graph.microsoft.com/.default" };
-
-                //var result = await app.AcquireTokenForClient(scopes)
-                //                      .ExecuteAsync();
-
-                //// Inicializar el cliente de Graph
-                //var graphClient = new GraphServiceClient(new DelegateAuthenticationProvider((requestMessage) =>
-                //{
-                //    requestMessage.Headers.Authorization = new AuthenticationHeaderValue("Bearer", result.AccessToken);
-                //    return Task.FromResult(0);
-                //}));
-
-                //// Subir el archivo a OneDrive
-                //var stream = File.OpenRead(filePath); // Ruta del archivo que quieres subir
-                //var uploadedFile = await graphClient.Me.Drive.Root.ItemWithPath("YOUR_FOLDER_PATH/" + fileName).Content
-                //                              .Request()
-                //                              .PutAsync<DriveItem>(stream);
-
-                //// Si se subió correctamente, devuelve el enlace de descarga
-                //var downloadLink = uploadedFile.WebUrl;
-
-
                 return Ok(response);
             }
 
@@ -244,7 +216,7 @@ namespace WebApiMafperu.Controllers
             try
             {
                 WebApiCrm crm = new WebApiCrm();
-                var response = crm.registrarCrm(datosRegistro);
+                var response = crm.registrarCrmContacto(datosRegistro);
                 return Ok(new RespuestaCrm { indicadorExito = response.indicadorExito, descripcionError = response.descripcionError });
 
             }
@@ -255,119 +227,46 @@ namespace WebApiMafperu.Controllers
             }
         }
 
-        //GET: listarSubMotivo
-        [HttpGet]
-        [Route("api/contacto/probando")]
-        public async Task<IHttpActionResult> prueba()
-        {
+        ////GET: listarSubMotivo
+        //[HttpGet]
+        //[Route("api/contacto/probando")]
+        //public async Task<IHttpActionResult> prueba()
+        //{
 
-            try
-            {
-                string grant_type = "client_credentials";
-                string tenantId = "9a2bc5f0-580b-4178-aa35-836e9eb5b4e8";
-                string clientId = "d8f057dc-5de8-4270-bac6-4755234f3d52";
-                string clientSecret = "kaX8Q~eJ3FF51EafLL1ObWFWT~HD2lxmmRWV8dnd";
-                string authority = "https://login.microsoftonline.com/" + tenantId;
-                string scope = "https://graph.microsoft.com/.default";
-                //string[] scopes = { "https://graph.microsoft.com/.default" };
+        //    try
+        //    {
+        //        string grant_type = "client_credentials";
+        //        string tenantId = "9a2bc5f0-580b-4178-aa35-836e9eb5b4e8";
+        //        string clientId = "d8f057dc-5de8-4270-bac6-4755234f3d52";
+        //        string clientSecret = "kaX8Q~eJ3FF51EafLL1ObWFWT~HD2lxmmRWV8dnd";
+        //        string authority = "https://login.microsoftonline.com/" + tenantId;
+        //        string scope = "https://graph.microsoft.com/.default";
+        //        var scopes = new string[] { "https://graph.microsoft.com/.default" };
 
-                //string _urlApi = $"https://login.microsoftonline.com/{tenantId}/oauth2/v2.0/token";
-                //MSGraphToken _token = new MSGraphToken();
+        //        Graph graph = new Graph();
+        //        var confidential = graph.GenerarConfidentialGraph(clientId, clientSecret, authority);
+        //        var res = await confidential.AcquireTokenForClient(scopes).ExecuteAsync();
 
-                //RestClient client = new RestClient(_urlApi);
-                //RestRequest request = new RestRequest("", Method.POST);
-                //request.AddHeader("Content-Type", "application/x-www-form-urlencoded");
-                //request.AddParameter("grant_type", grant_type);
-                //request.AddParameter("client_id", clientId);
-                //request.AddParameter("scope", scope);
-                //request.AddParameter("client_secret", clientSecret);
-
-                //var response = client.Execute(request);
-                //_token = JsonConvert.DeserializeObject<MSGraphToken>(response.Content); // JsonSerializer.Deserialize<MSGraphToken>(response.Content);
-
-                //if (_token != null)
-                //{
-                    var clientSecretCredential = new ClientSecretCredential(tenantId, clientId, clientSecret);
-                    var tokenRequestContext = new TokenRequestContext(new []{ scope });
-                    var token = clientSecretCredential.GetTokenAsync(tokenRequestContext).Result.Token;
-                    // URL de la API de Microsoft Graph para obtener los archivos de OneDrive
-                    string graphApiUrl = "https://graph.microsoft.com/v1.0/me/drive/root/children";
-
-                    // Configurar la solicitud HTTP
-                    HttpClient httpClient = new HttpClient();
-                    httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-
-                    // Hacer la solicitud GET a la API de Graph
-                    HttpResponseMessage response = await httpClient.GetAsync(graphApiUrl);
-                if (response.IsSuccessStatusCode)
-                {
-                    // Leer la respuesta JSON
-                    string jsonResponse = await response.Content.ReadAsStringAsync();
-                    dynamic json = JsonConvert.DeserializeObject(jsonResponse);
-
-                    // Procesar los archivos obtenidos
-                    List<string> fileNames = new List<string>();
-                    foreach (var item in json.value)
-                    {
-                        fileNames.Add(item.name.ToString());
-                    }
-
-                    return Ok(fileNames);
-                }
-                else
-                {
-                    return InternalServerError(new Exception($"Error al obtener los archivos de OneDrive: {response.ReasonPhrase}"));
-                }
-
-                //var graphClient = new GraphServiceClient(new DelegateAuthenticationProvider(async (requestMessage) =>
-                //{
-                //    requestMessage.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _token.access_token.ToString());
-                //    await Task.CompletedTask;
-                //})
-                //);
-                //var driveItems = await graphClient.Me.Drive.Root.Children.Request().GetAsync();
-
-                //}
-
-                //string tenantId = "9a2bc5f0-580b-4178-aa35-836e9eb5b4e8";
-                //string clientId = "d8f057dc-5de8-4270-bac6-4755234f3d52";
-                //string clientSecret = "kaX8Q~eJ3FF51EafLL1ObWFWT~HD2lxmmRWV8dnd";
-                //string authority = "https://login.microsoftonline.com/" + tenantId;
-                //string[] scopes = { "https://graph.microsoft.com/.default" };
-
-                //var app = ConfidentialClientApplicationBuilder
-                //   .Create(clientId)
-                //   .WithClientSecret(clientSecret)
-                //   .WithAuthority(new Uri(authority))
-                //   .Build();
-
-                //var authenticationResult = await app
-                //    .AcquireTokenForClient(scopes)
-                //    .ExecuteAsync();
-                //var graphClient = new GraphServiceClient(new DelegateAut(app, scopes));
-                //var tokenProvider  = new TokenAcquisition  authenticationResult.AccessToken;
-
-                
+       
+        //        var token = res.AccessToken;
 
 
-                //var httpClient = new HttpClient();
-                //httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+        //        var clientSecretCredential = new ClientSecretCredential(tenantId, clientId, clientSecret);
+        //        var graphClient = new GraphServiceClient(clientSecretCredential, scopes);
+        //        var me = await graphClient.Me.Drive.GetAsync();
+        //        var userDriveId = me.Id;
+        //        var children = await graphClient.Drives[userDriveId].Items["itemId"].Children.GetAsync();
+        //        var driveItems = await graphClient.Drives["userDriveId"].GetAsync();
 
-                //var response = await httpClient.GetAsync("https://graph.microsoft.com/v1.0/me");
-                //var content = await response.Content.ReadAsStringAsync();
 
+        //        return Ok(driveItems);
 
-                //var graphHandler = new GraphHandler(tenantId, clientId, clientSecret);
-
-                //var user = await graphHandler.GetUser("gianpvp99@gmail.com");
-                //Console.WriteLine(user?.DisplayName);
-
-            }
-            catch (Exception ex)
-            {
-                throw ex;
-            }
-        }
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        throw ex;
+        //    }
+        //}
 
 
         //POST: EnviarConsulta
@@ -574,68 +473,4 @@ public class MSGraphToken
     public int ext_expires_in { get; set; }
     public string access_token { get; set; }
     public MSGraphToken() { }
-}
-
-
-
-public class GraphHandler{
-
-    public GraphServiceClient GraphClient { get; private set; }
-    public GraphHandler(string tenantId, string clientId, string clientSecret)
-    {
-        GraphClient = CreateGraphClient(tenantId, clientId, clientSecret);
-    }
-
-    public GraphServiceClient CreateGraphClient(string tenantId, string clientId, string clientSecret)
-    {
-        var options = new TokenCredentialOptions
-        {
-            AuthorityHost = AzureAuthorityHosts.AzurePublicCloud
-        };
-
-        var clientSecretCredential = new ClientSecretCredential(
-            tenantId, clientId, clientSecret, options);
-        var scopes = new[] { "https://graph.microsoft.com/.default" };
-
-        return new GraphServiceClient(clientSecretCredential, scopes);
-
-    }
-
-    public async Task<Microsoft.Graph.Models.User> GetUser(string userPrincipalName)
-    {
-        return await GraphClient.Users[userPrincipalName].GetAsync();
-    }
-
-    //public async Task<(IEnumerable<Site>, IEnumerable<Site>)> GetSharepointSites()
-    //{
-    //    var sites = (await GraphClient.Sites.GetAllSites.GetAsync())?.Value;
-    //    if (sites == null)
-    //    {
-    //        return (null, null);
-    //    }
-
-    //    sites.RemoveAll(x => string.IsNullOrEmpty(x.DisplayName));
-
-    //    var spSites = new List<Site>();
-    //    var oneDriveSites = new List<Site>();
-
-    //    foreach (var site in sites)
-    //    {
-    //        if (site == null) continue;
-
-    //        var compare = site.WebUrl?.Split(site.SiteCollection?.Hostname)[1].Split("/");
-    //        if (compare.All(x => !string.IsNullOrEmpty(x)) || compare.Length < 1)
-    //        {
-    //            continue;
-    //        }
-
-    //        if (compare[1] == "sites" || string.IsNullOrEmpty(compare[1]))
-    //            spSites.Add(site);
-    //        else if (compare[1] == "personal")
-    //            oneDriveSites.Add(site);
-    //    }
-
-    //    return (spSites, oneDriveSites);
-    //}
-
 }
